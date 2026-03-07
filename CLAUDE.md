@@ -28,6 +28,10 @@ flutter pub get
 
 For WSL + Windows Android Studio configuration, see [setup.md](./setup.md). **Always update setup.md when performing any setup, installation, or configuration steps.**
 
+## Architecture
+
+Key technical decisions (backend, state management, packages, conventions) are recorded in [architecture.md](./architecture.md). **Always update architecture.md when making or changing a technical decision.**
+
 ## Feature / User Story Workflow
 
 When asked to add a feature or user story:
