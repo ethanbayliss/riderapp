@@ -12,17 +12,18 @@ class AuthNotifier extends ChangeNotifier {
     _authService.authStateChanges.listen((_) => notifyListeners());
   }
 
-  Future<void> register({
+  Future<bool> register({
     required String email,
     required String password,
     required String displayName,
   }) async {
-    await _authService.register(
+    final needsConfirmation = await _authService.register(
       email: email,
       password: password,
       displayName: displayName,
     );
     notifyListeners();
+    return needsConfirmation;
   }
 
   Future<void> login({

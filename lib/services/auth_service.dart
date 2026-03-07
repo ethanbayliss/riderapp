@@ -7,7 +7,8 @@ class AuthService {
 
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
-  Future<void> register({
+  /// Returns true if email confirmation is required before the user can log in.
+  Future<bool> register({
     required String email,
     required String password,
     required String displayName,
@@ -21,6 +22,12 @@ class AuthService {
     if (response.user == null) {
       throw Exception('Registration failed. Please try again.');
     }
+
+    if (response.user!.identities?.isEmpty ?? false) {
+      throw const AuthException('An account with this email already exists.');
+    }
+
+    return response.session == null;
   }
 
   Future<void> login({

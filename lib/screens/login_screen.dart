@@ -37,10 +37,13 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-    } on AuthException {
+    } on AuthException catch (e) {
       if (mounted) {
+        final message = e.message.contains('Email not confirmed')
+            ? 'Please verify your email before logging in. Check your inbox for the verification link.'
+            : 'Invalid email or password.';
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid email or password.')),
+          SnackBar(content: Text(message)),
         );
       }
     } catch (e) {
