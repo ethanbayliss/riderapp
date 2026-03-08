@@ -105,7 +105,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => LiveMapScreen(ride: rides[i].ride),
+                          builder: (_) => LiveMapScreen(
+                            membership: rides[i],
+                            userId: _userId,
+                            displayName: _displayName,
+                            rideNotifier: widget.rideNotifier,
+                          ),
                         ),
                       ),
                     ),
@@ -177,7 +182,12 @@ class _HomeScreenState extends State<HomeScreen> {
         displayName: _displayName,
       );
       if (context.mounted) {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => LiveMapScreen(ride: ride)));
+        Navigator.push(context, MaterialPageRoute(builder: (_) => LiveMapScreen(
+            membership: RideMembership(ride: ride, role: 'leader'),
+            userId: _userId,
+            displayName: _displayName,
+            rideNotifier: widget.rideNotifier,
+          )));
       }
     } catch (_) {
       if (context.mounted) {
@@ -243,7 +253,12 @@ class _HomeScreenState extends State<HomeScreen> {
         displayName: _displayName,
       );
       if (context.mounted) {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => LiveMapScreen(ride: ride)));
+        Navigator.push(context, MaterialPageRoute(builder: (_) => LiveMapScreen(
+              membership: RideMembership(ride: ride, role: 'rider'),
+              userId: _userId,
+              displayName: _displayName,
+              rideNotifier: widget.rideNotifier,
+            )));
       }
     } on RideNotFoundException {
       if (context.mounted) {

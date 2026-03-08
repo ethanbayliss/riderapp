@@ -76,6 +76,29 @@ class RideService {
     return ride;
   }
 
+  Future<void> leaveRide({
+    required String rideId,
+    required String userId,
+    required String displayName,
+    required bool isLeader,
+  }) async {
+    await _client
+        .from('ride_members')
+        .delete()
+        .eq('ride_id', rideId)
+        .eq('user_id', userId);
+
+    if (isLeader) {
+      await _client
+          .from('rides')
+          .update({'status': 'ended'})
+          .eq('id', rideId);
+      // TODO(RIDER-6): push realtime event so remaining members are notified
+    }
+
+    await _audioCallouts.announceLeave(displayName);
+  }
+
   Future<List<RideMembership>> getMyRides(String userId) async {
     final rows = await _client
         .from('ride_members')

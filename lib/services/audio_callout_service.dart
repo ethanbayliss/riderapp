@@ -3,4 +3,12 @@ class AudioCalloutService {
   Future<void> announceJoin(String displayName) async {
     // TODO(RIDER-10): speak "$displayName has joined the ride" via TTS
   }
+
+  Future<void> announceLeave(String displayName) async {
+    // TODO(RIDER-10): speak "$displayName has left the ride" via TTS
+  }
+
+  Future<void> announceRideEnded() async {
+    // TODO(RIDER-10): speak "The ride has ended" via TTS
+  }
 }

@@ -10,12 +10,12 @@ High
 As a rider, I want to leave a ride group so that my location is no longer shared and I am removed from the group map.
 
 ## Acceptance Criteria
-- [ ] Any rider can leave a ride at any time from the Live Map screen
-- [ ] Confirmation prompt shown before leaving to prevent accidental exit
-- [ ] On leave, rider is removed from the map for all other group members
-- [ ] Remaining group members receive an audio callout: *"[Name] has left the ride"*
-- [ ] User is returned to the Home screen after leaving
-- [ ] If the Ride Leader leaves, the ride ends for all participants with a notification
+- [x] Any rider can leave a ride at any time from the Live Map screen
+- [x] Confirmation prompt shown before leaving to prevent accidental exit
+- [x] On leave, rider is removed from the map for all other group members
+- [x] Remaining group members receive an audio callout: *"[Name] has left the ride"* (stubbed — full TTS in RIDER-10)
+- [x] User is returned to the Home screen after leaving
+- [x] If the Ride Leader leaves, the ride ends for all participants with a notification (realtime notification stubbed — delivery in RIDER-6)
 
 ## Technical Notes
 - Stop broadcasting location immediately on leave

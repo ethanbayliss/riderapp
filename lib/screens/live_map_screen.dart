@@ -1,27 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../models/ride.dart';
+import '../models/ride_membership.dart';
+import '../notifiers/ride_notifier.dart';
 
 class LiveMapScreen extends StatelessWidget {
-  final Ride ride;
+  final RideMembership membership;
+  final String userId;
+  final String displayName;
+  final RideNotifier rideNotifier;
 
-  const LiveMapScreen({super.key, required this.ride});
+  const LiveMapScreen({
+    super.key,
+    required this.membership,
+    required this.userId,
+    required this.displayName,
+    required this.rideNotifier,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(ride.name)),
+      appBar: AppBar(
+        title: Text(membership.ride.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
+            tooltip: 'Leave ride',
+            onPressed: () => _confirmLeave(context),
+          ),
+        ],
+      ),
       body: Column(
         children: [
-          _InviteCodeButton(code: ride.inviteCode),
+          _InviteCodeButton(code: membership.ride.inviteCode),
           const Expanded(
-            child: Center(
-              child: Text('Map coming soon'),
-            ),
+            child: Center(child: Text('Map coming soon')),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmLeave(BuildContext context) async {
+    final isLeader = membership.isLeader;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave Ride?'),
+        content: Text(
+          isLeader
+              ? 'You are the ride leader. Leaving will end the ride for all members.'
+              : 'Are you sure you want to leave this ride?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(isLeader ? 'End Ride' : 'Leave'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      await rideNotifier.leaveRide(
+        rideId: membership.ride.id,
+        userId: userId,
+        displayName: displayName,
+        isLeader: isLeader,
+      );
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to leave ride. Please try again.')),
+        );
+      }
+    }
   }
 }
 

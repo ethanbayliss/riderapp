@@ -28,6 +28,21 @@ class RideNotifier extends ChangeNotifier {
     return ride;
   }
 
+  Future<void> leaveRide({
+    required String rideId,
+    required String userId,
+    required String displayName,
+    required bool isLeader,
+  }) async {
+    await _rideService.leaveRide(
+      rideId: rideId,
+      userId: userId,
+      displayName: displayName,
+      isLeader: isLeader,
+    );
+    await loadMyRides(userId);
+  }
+
   Future<Ride> joinRide({
     required String inviteCode,
     required String userId,
