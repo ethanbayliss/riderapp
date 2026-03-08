@@ -13,6 +13,13 @@
       "toolArgs": ["--dart-define-from-file=.env.json"]
     },
     {
+      "name": "riderapp Android Wireless (debug)",
+      "request": "launch",
+      "type": "dart",
+      "deviceId": "adb-56040DLAQ00498-CYPRw0._adb-tls-connect._tcp",
+      "toolArgs": ["--dart-define-from-file=.env.json"]
+    },
+    {
       "name": "riderapp (web)",
       "request": "launch",
       "type": "dart",
