@@ -62,6 +62,7 @@ What this ticket explicitly does not cover.
 ```
 
 3. **Get confirmation** on the ticket before implementing.
+4. **Commit each story separately** — one commit per story, never batch multiple stories into a single commit.
 
 ## Architecture
 
