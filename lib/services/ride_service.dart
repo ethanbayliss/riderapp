@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/ride.dart';
+import '../models/ride_membership.dart';
 import 'audio_callout_service.dart';
 
 class RideService {
@@ -73,6 +74,17 @@ class RideService {
 
     await _audioCallouts.announceJoin(displayName);
     return ride;
+  }
+
+  Future<List<RideMembership>> getMyRides(String userId) async {
+    final rows = await _client
+        .from('ride_members')
+        .select('role, rides(id, name, invite_code, leader_id, status)')
+        .eq('user_id', userId);
+    return rows
+        .where((r) => r['rides'] != null && r['rides']['status'] == 'active')
+        .map((r) => RideMembership.fromJson(r))
+        .toList();
   }
 }
 

@@ -30,6 +30,8 @@ void main() {
     rideNotifier = MockRideNotifier();
     when(() => authNotifier.currentUser).thenReturn(null);
     when(() => authNotifier.isLoggedIn).thenReturn(true);
+    when(() => rideNotifier.myRides).thenReturn([]);
+    when(() => rideNotifier.loadMyRides(any())).thenAnswer((_) async {});
   });
 
   testWidgets('home screen has settings icon in app bar', (tester) async {

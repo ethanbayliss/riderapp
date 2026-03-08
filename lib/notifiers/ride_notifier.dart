@@ -1,9 +1,18 @@
 import 'package:flutter/foundation.dart';
 import '../models/ride.dart';
+import '../models/ride_membership.dart';
 import '../services/ride_service.dart';
 
 class RideNotifier extends ChangeNotifier {
   final _rideService = RideService();
+
+  List<RideMembership> _myRides = [];
+  List<RideMembership> get myRides => _myRides;
+
+  Future<void> loadMyRides(String userId) async {
+    _myRides = await _rideService.getMyRides(userId);
+    notifyListeners();
+  }
 
   Future<Ride> createRide({
     required String name,
@@ -15,7 +24,7 @@ class RideNotifier extends ChangeNotifier {
       leaderId: leaderId,
       displayName: displayName,
     );
-    notifyListeners();
+    await loadMyRides(leaderId);
     return ride;
   }
 
@@ -29,7 +38,7 @@ class RideNotifier extends ChangeNotifier {
       userId: userId,
       displayName: displayName,
     );
-    notifyListeners();
+    await loadMyRides(userId);
     return ride;
   }
 }
