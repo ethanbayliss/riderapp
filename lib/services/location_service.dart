@@ -64,6 +64,14 @@ class LocationService {
         .eq('user_id', userId);
   }
 
+  Future<List<RiderLocation>> fetchLocations(String rideId) async {
+    final rows = await _client
+        .from('rider_locations')
+        .select()
+        .eq('ride_id', rideId);
+    return rows.map(RiderLocation.fromJson).toList();
+  }
+
   Stream<List<RiderLocation>> riderLocationsStream(String rideId) {
     return _client
         .from('rider_locations')

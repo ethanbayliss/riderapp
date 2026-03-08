@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../models/ride_membership.dart';
 import '../notifiers/auth_notifier.dart';
 import '../notifiers/ride_notifier.dart';
+import '../services/location_service.dart';
 import '../services/ride_service.dart';
 import 'live_map_screen.dart';
 import 'settings_screen.dart';
@@ -21,6 +24,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final _locationService = LocationService();
+  Map<String, bool> _rideHasActiveRiders = {};
+  Timer? _locationRefreshTimer;
+
   @override
   void initState() {
     super.initState();
@@ -28,6 +35,33 @@ class _HomeScreenState extends State<HomeScreen> {
     if (userId != null) {
       widget.rideNotifier.loadMyRides(userId);
     }
+    widget.rideNotifier.addListener(_onRidesChanged);
+    _locationRefreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _refreshRideActivity(),
+    );
+  }
+
+  void _onRidesChanged() => _refreshRideActivity();
+
+  Future<void> _refreshRideActivity() async {
+    final rides = widget.rideNotifier.myRides;
+    final updated = <String, bool>{};
+    for (final membership in rides) {
+      final locs = await _locationService.fetchLocations(membership.ride.id);
+      // No location records means nobody has connected yet — treat as active.
+      // Only grey out when there are records and every one of them is stale.
+      updated[membership.ride.id] =
+          locs.isEmpty || locs.any((l) => !l.isStale);
+    }
+    if (mounted) setState(() => _rideHasActiveRiders = updated);
+  }
+
+  @override
+  void dispose() {
+    widget.rideNotifier.removeListener(_onRidesChanged);
+    _locationRefreshTimer?.cancel();
+    super.dispose();
   }
 
   String get _displayName =>
@@ -102,6 +136,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemCount: rides.length,
                     itemBuilder: (context, i) => _RideTile(
                       membership: rides[i],
+                      hasActiveRiders: _rideHasActiveRiders[rides[i].ride.id] ?? true,
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -284,17 +319,35 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class _RideTile extends StatelessWidget {
   final RideMembership membership;
+  final bool hasActiveRiders;
   final VoidCallback onTap;
 
-  const _RideTile({required this.membership, required this.onTap});
+  const _RideTile({
+    required this.membership,
+    required this.hasActiveRiders,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final dimColor = Theme.of(context).colorScheme.onSurface.withAlpha(97);
+    final roleLabel = membership.isLeader ? 'Leader' : 'Rider';
+    final statusLabel = hasActiveRiders ? '' : ' · No active riders';
+
     return ListTile(
-      leading: Icon(membership.isLeader ? Icons.star : Icons.directions_bike),
-      title: Text(membership.ride.name),
-      subtitle: Text(membership.isLeader ? 'Leader · ${membership.ride.inviteCode}' : 'Rider · ${membership.ride.inviteCode}'),
-      trailing: const Icon(Icons.chevron_right),
+      leading: Icon(
+        membership.isLeader ? Icons.star : Icons.directions_bike,
+        color: hasActiveRiders ? null : dimColor,
+      ),
+      title: Text(
+        membership.ride.name,
+        style: hasActiveRiders ? null : TextStyle(color: dimColor),
+      ),
+      subtitle: Text(
+        '$roleLabel · ${membership.ride.inviteCode}$statusLabel',
+        style: hasActiveRiders ? null : TextStyle(color: dimColor),
+      ),
+      trailing: Icon(Icons.chevron_right, color: hasActiveRiders ? null : dimColor),
       onTap: onTap,
     );
   }

@@ -427,7 +427,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     return Marker(
       point: LatLng(dest.latitude, dest.longitude),
       width: 48,
-      height: 64,
+      height: 48,
       alignment: Alignment.bottomCenter,
       child: GestureDetector(
         onTap: () => _showDestinationDetail(context, dest),
