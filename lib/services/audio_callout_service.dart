@@ -11,4 +11,8 @@ class AudioCalloutService {
   Future<void> announceRideEnded() async {
     // TODO(RIDER-10): speak "The ride has ended" via TTS
   }
+
+  Future<void> announceNewDestination(String? placeName) async {
+    // TODO(RIDER-10): speak "New destination set: ${placeName ?? 'a new location'}" via TTS
+  }
 }
