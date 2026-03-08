@@ -8,8 +8,19 @@ class AuthNotifier extends ChangeNotifier {
   User? get currentUser => _authService.currentUser;
   bool get isLoggedIn => currentUser != null;
 
+  /// True when this device was signed out because the account logged in elsewhere.
+  bool displacedSession = false;
+
+  bool _intentionalLogout = false;
+
   AuthNotifier() {
-    _authService.authStateChanges.listen((_) => notifyListeners());
+    _authService.authStateChanges.listen((state) {
+      if (state.event == AuthChangeEvent.signedOut && !_intentionalLogout) {
+        displacedSession = true;
+      }
+      _intentionalLogout = false;
+      notifyListeners();
+    });
   }
 
   Future<bool> register({
@@ -30,12 +41,22 @@ class AuthNotifier extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
+    displacedSession = false;
     await _authService.login(email: email, password: password);
     notifyListeners();
   }
 
   Future<void> logout() async {
+    _intentionalLogout = true;
     await _authService.logout();
     notifyListeners();
   }
+
+  Future<void> updateMarkerIcon(String icon) async {
+    await _authService.updateMarkerIcon(icon);
+    notifyListeners();
+  }
+
+  String get markerIcon =>
+      currentUser?.userMetadata?['marker_icon'] as String? ?? 'motorcycle';
 }

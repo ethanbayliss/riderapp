@@ -10,18 +10,18 @@ Medium
 As a rider, I want to see my current speed and heading displayed on the Live Map screen so that I am always aware of my speed and direction while riding.
 
 ## Acceptance Criteria
-- [ ] Current speed is displayed in km/h as a live-updating overlay on the map
-- [ ] Heading (compass direction) is displayed alongside speed (e.g. N, NE, SE)
-- [ ] Both indicators update in real time as the device moves
-- [ ] Indicators are readable at a glance while riding (large, high-contrast text)
-- [ ] When GPS signal is lost, indicators show a clear stale/unavailable state
+- [x] Current speed is displayed in km/h as a live-updating overlay on the map
+- [x] Heading (compass direction) is displayed alongside speed (e.g. N, NE, SE)
+- [x] Both indicators update in real time as the device moves
+- [x] Indicators are readable at a glance while riding (large, high-contrast text)
+- [x] When GPS signal is lost, indicators show a clear stale/unavailable state
 
 ## Technical Notes
-- Source speed and heading from `geolocator` package (already listed as a key package in architecture.md)
-- `Position.speed` is in m/s — convert to km/h for display
-- `Position.heading` is 0–360° — map to 16-point compass or show degrees
-- Update interval should match location broadcast frequency from RIDER-7
-- Overlay should not obscure the map or the invite code button
+- `_SpeedHeadingWidget` positioned bottom-left of the map stack
+- Speed: `Position.speed * 3.6` (m/s → km/h), clamped to 0
+- Heading: 16-point compass mapped from 0–360° via `(deg / 22.5).round() % 16`
+- Shows `-- km/h` and `--` when `_myPosition` is null
+- Dark semi-transparent background for contrast over any map tile
 
 ## Out of Scope
 - Speed limit warnings

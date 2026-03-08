@@ -35,9 +35,15 @@ class AuthService {
     required String password,
   }) async {
     await _client.auth.signInWithPassword(email: email, password: password);
+    // Invalidate any other active sessions for this account.
+    await _client.auth.signOut(scope: SignOutScope.others);
   }
 
   Future<void> logout() async {
     await _client.auth.signOut();
+  }
+
+  Future<void> updateMarkerIcon(String icon) async {
+    await _client.auth.updateUser(UserAttributes(data: {'marker_icon': icon}));
   }
 }

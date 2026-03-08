@@ -1,5 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/marker_icons.dart';
 import '../models/rider_location.dart';
 
 class LocationService {
@@ -41,6 +42,7 @@ class LocationService {
     required double latitude,
     required double longitude,
     double? heading,
+    String markerIcon = kDefaultMarkerIcon,
   }) async {
     await _client.from('rider_locations').upsert({
       'ride_id': rideId,
@@ -49,6 +51,7 @@ class LocationService {
       'latitude': latitude,
       'longitude': longitude,
       'heading': heading,
+      'marker_icon': markerIcon,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
   }

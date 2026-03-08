@@ -5,6 +5,7 @@ class RiderLocation {
   final double latitude;
   final double longitude;
   final double? heading;
+  final String markerIcon;
   final DateTime updatedAt;
 
   const RiderLocation({
@@ -14,6 +15,7 @@ class RiderLocation {
     required this.latitude,
     required this.longitude,
     this.heading,
+    required this.markerIcon,
     required this.updatedAt,
   });
 
@@ -27,6 +29,7 @@ class RiderLocation {
         latitude: (json['latitude'] as num).toDouble(),
         longitude: (json['longitude'] as num).toDouble(),
         heading: (json['heading'] as num?)?.toDouble(),
+        markerIcon: (json['marker_icon'] as String?) ?? 'motorcycle',
         updatedAt: DateTime.parse(json['updated_at'] as String).toUtc(),
       );
 }

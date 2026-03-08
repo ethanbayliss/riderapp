@@ -144,6 +144,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             membership: rides[i],
                             userId: _userId,
                             displayName: _displayName,
+                            markerIcon: widget.authNotifier.markerIcon,
+                            authNotifier: widget.authNotifier,
                             rideNotifier: widget.rideNotifier,
                           ),
                         ),
@@ -221,6 +223,8 @@ class _HomeScreenState extends State<HomeScreen> {
             membership: RideMembership(ride: ride, role: 'leader'),
             userId: _userId,
             displayName: _displayName,
+            markerIcon: widget.authNotifier.markerIcon,
+            authNotifier: widget.authNotifier,
             rideNotifier: widget.rideNotifier,
           )));
       }
@@ -292,6 +296,8 @@ class _HomeScreenState extends State<HomeScreen> {
               membership: RideMembership(ride: ride, role: 'rider'),
               userId: _userId,
               displayName: _displayName,
+              markerIcon: widget.authNotifier.markerIcon,
+              authNotifier: widget.authNotifier,
               rideNotifier: widget.rideNotifier,
             )));
       }

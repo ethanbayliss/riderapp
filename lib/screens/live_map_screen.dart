@@ -5,11 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/marker_icons.dart';
 import '../models/ride_destination.dart';
 import '../models/ride_membership.dart';
 import '../models/rider_location.dart';
+import '../notifiers/auth_notifier.dart';
 import '../notifiers/ride_notifier.dart';
 import '../services/audio_callout_service.dart';
 import '../services/destination_service.dart';
@@ -19,6 +22,8 @@ class LiveMapScreen extends StatefulWidget {
   final RideMembership membership;
   final String userId;
   final String displayName;
+  final String markerIcon;
+  final AuthNotifier authNotifier;
   final RideNotifier rideNotifier;
 
   const LiveMapScreen({
@@ -26,6 +31,8 @@ class LiveMapScreen extends StatefulWidget {
     required this.membership,
     required this.userId,
     required this.displayName,
+    required this.markerIcon,
+    required this.authNotifier,
     required this.rideNotifier,
   });
 
@@ -46,6 +53,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<List<RiderLocation>>? _locationsSub;
   StreamSubscription<RideDestination?>? _destinationSub;
+  StreamSubscription<AuthState>? _authSub;
   Timer? _broadcastTimer;
   Timer? _staleCheckTimer;
 
@@ -53,10 +61,29 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   bool _permissionGranted = false;
   bool _centred = false;
 
+  // Join/leave detection
+  Map<String, String> _knownRiders = {}; // userId → displayName
+
+  // Arrival detection
+  final Set<String> _announcedArrivedIds = {};
+  bool _allArrivedAnnounced = false;
+
+  static const _arrivalRadiusMeters = 100.0;
+
   @override
   void initState() {
     super.initState();
     _init();
+    _listenForDisplacement();
+  }
+
+  void _listenForDisplacement() {
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+      if (state.event == AuthChangeEvent.signedOut && mounted) {
+        _cancelSubscriptions();
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    });
   }
 
   Future<void> _init() async {
@@ -79,14 +106,18 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
 
     _locationsSub = _locationService
         .riderLocationsStream(widget.membership.ride.id)
-        .listen((locs) {
-      if (mounted) setState(() => _riderLocations = locs);
-    });
+        .listen(_onLocationsUpdate);
 
     _destinationSub = _destinationService
         .currentDestinationStream(widget.membership.ride.id)
         .listen((dest) {
-      if (mounted) setState(() => _currentDestination = dest);
+      if (!mounted) return;
+      final prevId = _currentDestination?.id;
+      setState(() => _currentDestination = dest);
+      if (dest?.id != prevId) {
+        _announcedArrivedIds.clear();
+        _allArrivedAnnounced = false;
+      }
     });
 
     _positionSub = _locationService.positionStream().listen((pos) {
@@ -96,6 +127,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         _mapController.move(LatLng(pos.latitude, pos.longitude), 15);
         _centred = true;
       }
+      _checkArrivals();
     });
 
     _broadcastTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
@@ -108,6 +140,53 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     });
   }
 
+  void _onLocationsUpdate(List<RiderLocation> locs) {
+    if (!mounted) return;
+
+    final newRiders = {for (final l in locs) l.userId: l.displayName};
+
+    // Announce joins (skip self, skip first load when _knownRiders is empty)
+    if (_knownRiders.isNotEmpty) {
+      for (final entry in newRiders.entries) {
+        if (entry.key != widget.userId && !_knownRiders.containsKey(entry.key)) {
+          _audioCallouts.announceJoin(entry.value);
+        }
+      }
+      for (final entry in _knownRiders.entries) {
+        if (entry.key != widget.userId && !newRiders.containsKey(entry.key)) {
+          _audioCallouts.announceLeave(entry.value);
+        }
+      }
+    }
+
+    _knownRiders = newRiders;
+    setState(() => _riderLocations = locs);
+    _checkArrivals();
+  }
+
+  void _checkArrivals() {
+    final dest = _currentDestination;
+    if (dest == null || _allArrivedAnnounced) return;
+
+    final active = _riderLocations.where((l) => !l.isStale).toList();
+    if (active.isEmpty) return;
+
+    for (final loc in active) {
+      if (_announcedArrivedIds.contains(loc.userId)) continue;
+      final dist = Geolocator.distanceBetween(
+          loc.latitude, loc.longitude, dest.latitude, dest.longitude);
+      if (dist <= _arrivalRadiusMeters) {
+        _announcedArrivedIds.add(loc.userId);
+        _audioCallouts.announceArrived(loc.displayName);
+      }
+    }
+
+    if (_announcedArrivedIds.length >= active.length) {
+      _allArrivedAnnounced = true;
+      _audioCallouts.announceAllArrived();
+    }
+  }
+
   Future<void> _upsertPosition(Position pos) => _locationService.upsertLocation(
         rideId: widget.membership.ride.id,
         userId: widget.userId,
@@ -115,6 +194,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         latitude: pos.latitude,
         longitude: pos.longitude,
         heading: pos.heading,
+        markerIcon: widget.markerIcon,
       );
 
   void _cancelSubscriptions() {
@@ -123,6 +203,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     _positionSub?.cancel();
     _locationsSub?.cancel();
     _destinationSub?.cancel();
+    _authSub?.cancel();
   }
 
   @override
@@ -340,6 +421,12 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
             label: Text('$activeRiderCount ${activeRiderCount == 1 ? 'rider' : 'riders'}'),
           ),
         ),
+        // Speed & heading
+        Positioned(
+          bottom: dest != null ? 80 : 40,
+          left: 8,
+          child: _SpeedHeadingWidget(position: myPos),
+        ),
         // Re-centre
         Positioned(
           bottom: dest != null ? 88 : 16,
@@ -397,7 +484,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
                 radius: 16,
                 backgroundColor: color,
                 child: Icon(
-                  isMe ? Icons.person : Icons.directions_bike,
+                  iconForKey(loc.markerIcon),
                   color: colorScheme.onPrimary,
                   size: 16,
                 ),
@@ -451,6 +538,58 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
           LatLng(result.latitude, result.longitude),
         ),
         destinationService: _destinationService,
+      ),
+    );
+  }
+}
+
+// ── Speed & heading overlay ───────────────────────────────────────────────────
+
+class _SpeedHeadingWidget extends StatelessWidget {
+  final Position? position;
+  const _SpeedHeadingWidget({required this.position});
+
+  static const _compass = [
+    'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+    'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
+  ];
+
+  String _headingLabel(double deg) => _compass[(deg / 22.5).round() % 16];
+
+  @override
+  Widget build(BuildContext context) {
+    final pos = position;
+    final speedKmh = pos != null ? (pos.speed * 3.6).clamp(0, 9999) : null;
+    final heading = pos?.heading;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withAlpha(160),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            speedKmh != null ? '${speedKmh.toStringAsFixed(0)} km/h' : '-- km/h',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            heading != null ? _headingLabel(heading) : '--',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
