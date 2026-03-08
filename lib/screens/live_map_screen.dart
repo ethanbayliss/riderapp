@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -472,21 +473,37 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       final color = isMe ? colorScheme.primary : colorScheme.secondary;
       final opacity = loc.isStale ? 0.35 : 1.0;
 
+      final heading = loc.heading;
+
       return Marker(
         point: LatLng(loc.latitude, loc.longitude),
         width: 80,
-        height: 56,
+        height: 66,
         child: Opacity(
           opacity: opacity,
           child: Column(
             children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: color,
-                child: Icon(
-                  iconForKey(loc.markerIcon),
-                  color: colorScheme.onPrimary,
-                  size: 16,
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (heading != null)
+                      Transform.rotate(
+                        angle: heading * math.pi / 180,
+                        child: Icon(Icons.navigation, color: color, size: 40),
+                      ),
+                    CircleAvatar(
+                      radius: heading != null ? 12 : 16,
+                      backgroundColor: color,
+                      child: Icon(
+                        iconForKey(loc.markerIcon),
+                        color: colorScheme.onPrimary,
+                        size: heading != null ? 12 : 16,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 2),
@@ -549,18 +566,10 @@ class _SpeedHeadingWidget extends StatelessWidget {
   final Position? position;
   const _SpeedHeadingWidget({required this.position});
 
-  static const _compass = [
-    'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-    'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'
-  ];
-
-  String _headingLabel(double deg) => _compass[(deg / 22.5).round() % 16];
-
   @override
   Widget build(BuildContext context) {
     final pos = position;
     final speedKmh = pos != null ? (pos.speed * 3.6).clamp(0, 9999) : null;
-    final heading = pos?.heading;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -568,28 +577,14 @@ class _SpeedHeadingWidget extends StatelessWidget {
         color: Colors.black.withAlpha(160),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            speedKmh != null ? '${speedKmh.toStringAsFixed(0)} km/h' : '-- km/h',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            heading != null ? _headingLabel(heading) : '--',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+      child: Text(
+        speedKmh != null ? '${speedKmh.toStringAsFixed(0)} km/h' : '-- km/h',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          fontFeatures: [FontFeature.tabularFigures()],
+        ),
       ),
     );
   }
