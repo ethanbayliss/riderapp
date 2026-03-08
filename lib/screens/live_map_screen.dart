@@ -38,6 +38,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<List<RiderLocation>>? _locationsSub;
   Timer? _broadcastTimer;
+  Timer? _staleCheckTimer;
 
   bool _isSatellite = false;
   bool _permissionGranted = false;
@@ -90,6 +91,11 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       final pos = _myPosition;
       if (pos != null) await _upsertPosition(pos);
     });
+
+    // Periodically rebuild so stale markers fade even when no new data arrives
+    _staleCheckTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) setState(() {});
+    });
   }
 
   Future<void> _upsertPosition(Position pos) => _locationService.upsertLocation(
@@ -104,6 +110,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   @override
   void dispose() {
     _broadcastTimer?.cancel();
+    _staleCheckTimer?.cancel();
     _positionSub?.cancel();
     _locationsSub?.cancel();
     super.dispose();
@@ -139,6 +146,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     if (confirmed != true || !context.mounted) return;
 
     _broadcastTimer?.cancel();
+    _staleCheckTimer?.cancel();
     _positionSub?.cancel();
     _locationsSub?.cancel();
 
@@ -210,7 +218,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       );
     }
 
-    final riderCount = _riderLocations.length;
+    final riderCount = _riderLocations.where((loc) => !loc.isStale).length;
 
     return Stack(
       children: [
