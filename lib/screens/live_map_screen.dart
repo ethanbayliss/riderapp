@@ -318,12 +318,17 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
             MarkerLayer(markers: _buildRiderMarkers(context)),
             if (dest != null)
               MarkerLayer(markers: [_buildDestinationMarker(context, dest)]),
-            if (!_isSatellite)
-              const RichAttributionWidget(
-                  attributions: [TextSourceAttribution('OpenStreetMap contributors')]),
-            if (_isSatellite)
-              const RichAttributionWidget(
-                  attributions: [TextSourceAttribution('Esri')]),
+            RichAttributionWidget(
+              alignment: AttributionAlignment.bottomLeft,
+              attributions: [
+                TextSourceAttribution(
+                  _isSatellite ? 'Esri' : '© OpenStreetMap contributors',
+                  onTap: () => launchUrl(Uri.parse(_isSatellite
+                      ? 'https://www.esri.com'
+                      : 'https://www.openstreetmap.org/copyright')),
+                ),
+              ],
+            ),
           ],
         ),
         // Rider count
