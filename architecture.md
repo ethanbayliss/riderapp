@@ -19,7 +19,7 @@ This document records key technical decisions for the RiderApp project.
 
 ## Key Packages (to be added as needed)
 - `supabase_flutter` — Supabase client
-- `google_maps_flutter` — map rendering
+- `flutter_map` + `latlong2` — map rendering using OpenStreetMap tiles (no API key required; chosen over google_maps_flutter to avoid platform key management)
 - `geolocator` — device GPS
 - `flutter_tts` — text-to-speech audio callouts
 
