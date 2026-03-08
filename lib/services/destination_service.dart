@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/ride_destination.dart';
@@ -11,7 +12,12 @@ class DestinationService {
   static const _nominatimBase = 'https://nominatim.openstreetmap.org';
   // Nominatim policy requires a descriptive User-Agent with contact info:
   // https://operations.osmfoundation.org/policies/nominatim/
-  static const _userAgent = 'RiderApp/1.0 (https://github.com/ethanbayliss/riderapp)';
+  static const _contact = 'https://github.com/ethanbayliss/riderapp';
+
+  Future<String> _userAgent() async {
+    final info = await PackageInfo.fromPlatform();
+    return 'RiderApp/${info.version} ($_contact)';
+  }
 
   // ── Geocoding ──────────────────────────────────────────────────────────────
 
@@ -23,7 +29,7 @@ class DestinationService {
         'format': 'json',
         'zoom': '18',
       });
-      final res = await http.get(uri, headers: {'User-Agent': _userAgent});
+      final res = await http.get(uri, headers: {'User-Agent': await _userAgent()});
       if (res.statusCode != 200) return null;
       final json = jsonDecode(res.body) as Map<String, dynamic>;
       return json['display_name'] as String?;
@@ -40,7 +46,7 @@ class DestinationService {
         'format': 'json',
         'limit': '5',
       });
-      final res = await http.get(uri, headers: {'User-Agent': _userAgent});
+      final res = await http.get(uri, headers: {'User-Agent': await _userAgent()});
       if (res.statusCode != 200) return [];
       final list = jsonDecode(res.body) as List<dynamic>;
       return list.map((item) {
