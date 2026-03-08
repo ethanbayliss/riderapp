@@ -5,24 +5,31 @@ import '../services/ride_service.dart';
 class RideNotifier extends ChangeNotifier {
   final _rideService = RideService();
 
-  Ride? _activeRide;
-  Ride? get activeRide => _activeRide;
-  bool get hasActiveRide => _activeRide != null;
-
-  Future<Ride> createRide({required String name, required String leaderId}) async {
-    final ride = await _rideService.createRide(name: name, leaderId: leaderId);
-    _activeRide = ride;
+  Future<Ride> createRide({
+    required String name,
+    required String leaderId,
+    required String displayName,
+  }) async {
+    final ride = await _rideService.createRide(
+      name: name,
+      leaderId: leaderId,
+      displayName: displayName,
+    );
     notifyListeners();
     return ride;
   }
 
-  Future<void> loadActiveRide(String userId) async {
-    _activeRide = await _rideService.activeRideForUser(userId);
+  Future<Ride> joinRide({
+    required String inviteCode,
+    required String userId,
+    required String displayName,
+  }) async {
+    final ride = await _rideService.joinRide(
+      inviteCode: inviteCode,
+      userId: userId,
+      displayName: displayName,
+    );
     notifyListeners();
-  }
-
-  void clearRide() {
-    _activeRide = null;
-    notifyListeners();
+    return ride;
   }
 }
