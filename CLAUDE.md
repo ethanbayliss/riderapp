@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Run the app (Android)
-flutter run
+flutter run --dart-define-from-file=.env.json
 
 # Run web version (WSL) — then open http://localhost:8080 in Windows browser or ctrl + shift + P > Browser: New tab
-flutter run -d web-server --web-port 8080
+flutter run -d web-server --web-port 8080 --dart-define-from-file=.env.json
 
 # Run tests
 flutter test

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../notifiers/auth_notifier.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final AuthNotifier authNotifier;
@@ -15,11 +16,14 @@ class HomeScreen extends StatelessWidget {
         title: const Text('RiderApp'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Log out',
-            onPressed: () async {
-              await authNotifier.logout();
-            },
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SettingsScreen(authNotifier: authNotifier),
+              ),
+            ),
           ),
         ],
       ),
