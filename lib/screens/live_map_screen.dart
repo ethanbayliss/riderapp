@@ -65,6 +65,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   bool _permissionGranted = false;
   bool _centred = false;
 
+  DateTime? _lastBroadcast;
+
   // Join/leave detection
   Map<String, String> _knownRiders = {}; // userId → displayName
 
@@ -143,9 +145,17 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
         _centred = true;
       }
       _checkArrivals();
+      // Broadcast immediately on movement, throttled to at most once per second.
+      final now = DateTime.now();
+      if (_lastBroadcast == null ||
+          now.difference(_lastBroadcast!) >= const Duration(seconds: 1)) {
+        _lastBroadcast = now;
+        _upsertPosition(pos);
+      }
     });
 
-    _broadcastTimer = Timer.periodic(const Duration(seconds: 4), (_) async {
+    // Heartbeat timer keeps the location fresh when stationary (no GPS events).
+    _broadcastTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
       final pos = _myPosition;
       if (pos != null) await _upsertPosition(pos);
     });
