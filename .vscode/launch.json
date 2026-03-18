@@ -6,7 +6,7 @@
   "configurations": [
 
     {
-      "name": "riderapp Android (debug)",
+      "name": "riderapp Android Emulator (debug)",
       "request": "launch",
       "type": "dart",
       "deviceId": "emulator-5554",
@@ -20,6 +20,30 @@
       "toolArgs": ["--dart-define-from-file=.env.json"]
     },
     {
+      "name": "riderapp Android Emulator (profile mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "deviceId": "emulator-5554",
+      "toolArgs": ["--dart-define-from-file=.env.json"]
+    },
+    {
+      "name": "riderapp Android Wireless (profile mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "profile",
+      "deviceId": "adb-56040DLAQ00498-CYPRw0._adb-tls-connect._tcp",
+      "toolArgs": ["--dart-define-from-file=.env.json"]
+    },
+    {
+      "name": "riderapp Android Emulator (release mode)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "release",
+      "deviceId": "emulator-5554",
+      "toolArgs": ["--dart-define-from-file=.env.json"]
+    },
+    {
       "name": "riderapp (web)",
       "request": "launch",
       "type": "dart",
@@ -28,20 +52,6 @@
       "env": {
         "CHROME_EXECUTABLE": "/snap/chromium/3375/usr/lib/chromium-browser/chrome"
       }
-    },
-    {
-      "name": "riderapp (profile mode)",
-      "request": "launch",
-      "type": "dart",
-      "flutterMode": "profile",
-      "toolArgs": ["--dart-define-from-file=.env.json"]
-    },
-    {
-      "name": "riderapp (release mode)",
-      "request": "launch",
-      "type": "dart",
-      "flutterMode": "release",
-      "toolArgs": ["--dart-define-from-file=.env.json"]
     }
   ]
 }
