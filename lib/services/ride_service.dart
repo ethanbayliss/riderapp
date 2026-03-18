@@ -80,7 +80,6 @@ class RideService {
     required String rideId,
     required String userId,
     required String displayName,
-    required bool isLeader,
   }) async {
     await _client
         .from('ride_members')
@@ -88,15 +87,21 @@ class RideService {
         .eq('ride_id', rideId)
         .eq('user_id', userId);
 
-    if (isLeader) {
-      await _client
-          .from('rides')
-          .update({'status': 'ended'})
-          .eq('id', rideId);
-      // TODO(RIDER-6): push realtime event so remaining members are notified
-    }
-
     await _audioCallouts.announceLeave(displayName);
+  }
+
+  /// Ends the ride for all members. Only the leader should call this.
+  /// Remaining members are notified via the Supabase Realtime ride status stream.
+  Future<void> endRide({
+    required String rideId,
+    required String userId,
+  }) async {
+    await _client.from('rides').update({'status': 'ended'}).eq('id', rideId);
+    await _client
+        .from('ride_members')
+        .delete()
+        .eq('ride_id', rideId)
+        .eq('user_id', userId);
   }
 
   Future<List<RideMembership>> getMyRides(String userId) async {

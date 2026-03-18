@@ -55,8 +55,11 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   StreamSubscription<List<RiderLocation>>? _locationsSub;
   StreamSubscription<RideDestination?>? _destinationSub;
   StreamSubscription<AuthState>? _authSub;
+  StreamSubscription<List<Map<String, dynamic>>>? _rideStatusSub;
   Timer? _broadcastTimer;
   Timer? _staleCheckTimer;
+
+  bool _rideEndedHandled = false;
 
   bool _isSatellite = false;
   bool _permissionGranted = false;
@@ -88,6 +91,17 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
   }
 
   Future<void> _init() async {
+    // Subscribe to ride status changes so all members are notified when the
+    // leader ends the ride, regardless of who initiates it.
+    _rideStatusSub = Supabase.instance.client
+        .from('rides')
+        .stream(primaryKey: ['id'])
+        .eq('id', widget.membership.ride.id)
+        .listen((rows) {
+      if (!mounted || rows.isEmpty) return;
+      if (rows.first['status'] == 'ended') _onRideEnded();
+    });
+
     final permission = await _locationService.requestPermission();
     if (!mounted) return;
 
@@ -205,6 +219,7 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     _locationsSub?.cancel();
     _destinationSub?.cancel();
     _authSub?.cancel();
+    _rideStatusSub?.cancel();
   }
 
   @override
@@ -252,19 +267,29 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     );
   }
 
-  // ── Leave ──────────────────────────────────────────────────────────────────
+  // ── Ride ended (realtime) ──────────────────────────────────────────────────
 
-  Future<void> _confirmLeave(BuildContext context) async {
-    final isLeader = widget.membership.isLeader;
+  Future<void> _onRideEnded() async {
+    if (_rideEndedHandled || !mounted) return;
+    _rideEndedHandled = true;
+    _cancelSubscriptions();
+    await _locationService.removeLocation(
+      rideId: widget.membership.ride.id,
+      userId: widget.userId,
+    );
+    await widget.rideNotifier.loadMyRides(widget.userId);
+    _audioCallouts.announceRideEnded();
+    if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  // ── End ride (leader) ──────────────────────────────────────────────────────
+
+  Future<void> _confirmEndRide(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Leave Ride?'),
-        content: Text(
-          isLeader
-              ? 'You are the ride leader. Leaving will end the ride for all members.'
-              : 'Are you sure you want to leave this ride?',
-        ),
+        title: const Text('End Ride?'),
+        content: const Text('This will end the ride for all members.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -275,7 +300,58 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: Text(isLeader ? 'End Ride' : 'Leave'),
+            child: const Text('End Ride'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    // Mark as handled so the realtime callback doesn't double-navigate.
+    _rideEndedHandled = true;
+    _cancelSubscriptions();
+    await _locationService.removeLocation(
+      rideId: widget.membership.ride.id,
+      userId: widget.userId,
+    );
+    try {
+      await widget.rideNotifier.endRide(
+        rideId: widget.membership.ride.id,
+        userId: widget.userId,
+      );
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to end ride. Please try again.')),
+        );
+      }
+      _rideEndedHandled = false;
+      return;
+    }
+    _audioCallouts.announceRideEnded();
+    if (context.mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  // ── Leave ──────────────────────────────────────────────────────────────────
+
+  Future<void> _confirmLeave(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Leave Ride?'),
+        content: const Text('Are you sure you want to leave this ride?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('Leave'),
           ),
         ],
       ),
@@ -284,7 +360,6 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
     if (confirmed != true || !context.mounted) return;
 
     _cancelSubscriptions();
-
     await _locationService.removeLocation(
       rideId: widget.membership.ride.id,
       userId: widget.userId,
@@ -293,12 +368,8 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
       rideId: widget.membership.ride.id,
       userId: widget.userId,
       displayName: widget.displayName,
-      isLeader: widget.membership.isLeader,
     );
-
-    if (context.mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    }
+    if (context.mounted) Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -334,11 +405,18 @@ class _LiveMapScreenState extends State<LiveMapScreen> {
             tooltip: _isSatellite ? 'Standard view' : 'Satellite view',
             onPressed: () => setState(() => _isSatellite = !_isSatellite),
           ),
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            tooltip: 'Leave ride',
-            onPressed: () => _confirmLeave(context),
-          ),
+          if (isLeader)
+            IconButton(
+              icon: const Icon(Icons.stop_circle_outlined),
+              tooltip: 'End ride',
+              onPressed: () => _confirmEndRide(context),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.exit_to_app),
+              tooltip: 'Leave ride',
+              onPressed: () => _confirmLeave(context),
+            ),
         ],
       ),
       body: Column(

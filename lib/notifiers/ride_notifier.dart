@@ -32,14 +32,20 @@ class RideNotifier extends ChangeNotifier {
     required String rideId,
     required String userId,
     required String displayName,
-    required bool isLeader,
   }) async {
     await _rideService.leaveRide(
       rideId: rideId,
       userId: userId,
       displayName: displayName,
-      isLeader: isLeader,
     );
+    await loadMyRides(userId);
+  }
+
+  Future<void> endRide({
+    required String rideId,
+    required String userId,
+  }) async {
+    await _rideService.endRide(rideId: rideId, userId: userId);
     await loadMyRides(userId);
   }
 
